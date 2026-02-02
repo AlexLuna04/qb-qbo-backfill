@@ -19,15 +19,7 @@ Se implementan tres pipelines:
 
 ## 2. Arquitectura
 
-QuickBooks Online (API)
-        |
-        | OAuth 2.0
-        v
-Mage AI (Docker)
-        |
-        | SQLAlchemy
-        v
-PostgreSQL (raw schema)
+QuickBooks Online (API) -> OAuth 2.0 -> Mage AI (Docker) -> SQLAlchemy -> PostgreSQL (raw schema)
 
 Componentes:
 - Mage AI: orquestación, triggers, secrets, observabilidad
@@ -36,18 +28,18 @@ Componentes:
 
 ## 3. Pasos para levantar el proyecto
 
-# 3.1 Requisitos
+### 3.1 Requisitos
 
 - Docker
 - Docker Compose
 - Git
 
-# 3.2 Clonar el repositorio
+### 3.2 Clonar el repositorio
 
 git clone <url_del_repo>
 cd qb-backfill
 
-# 3.3 Levantar contenedores
+### 3.3 Levantar contenedores
 
 docker compose up -d
 
@@ -59,33 +51,33 @@ Mage y Postgres se comunican por nombre de servicio, no por localhost.
 ## 4. Gestión de secretos
 Todos los valores sensibles se almacenan en Mage Secrets.
 
-# 4.1 Secretos de QuickBooks
+### 4.1 Secretos de QuickBooks
 - QBO_CLIENT_ID:        Identificación OAuth
 - QBO_CLIENT_SECRET:    Secreto OAuth
 - QBO_REFRESH_TOKEN:    Renovación de access token
 - QBO_REALM_ID:     	Identificador de la compañía
 - QBO_ENV:          	Entorno (sandbox)
 
-# 4.2 Secretos de PostgreSQL
+### 4.2 Secretos de PostgreSQL
 - PG_HOST:      Nombre del servicio Postgres
 - PG_PORT:  	Puerto
 - PG_DB:    	Base de datos
 - PG_USER:  	Usuario
 - PG_PASSWORD:  Contraseña
 
-# 4.3 Rotación y responsables
+### 4.3 Rotación y responsables
 - Rotación: manual, al expirar tokens o por política de seguridad
 - Responsable: equipo de Data / Analytics
 No se almacenan secretos en el repositorio ni en archivos .env
 
 ## 5. Pipelines de backfill
 
-# 5.1 Pipelines implementados
+### 5.1 Pipelines implementados
 - qb_customers_backfill
 - qb_items_backfill
 - qb_invoices_backfill
 
-# 5.2 Parámetros
+### 5.2 Parámetros
 Todos los pipelines reciben runtime variables desde el trigger:
 - fecha_inicio: Inicio del backfill (UTC, ISO 8601)
 - fecha_fin:    Fin del backfill (UTC, ISO 8601)
@@ -94,18 +86,18 @@ Ejemplo:
 2023-01-01T00:00:00+00:00
 2023-01-31T00:00:00+00:00
 
-# 5.3 Segmentación (chunking)
+### 5.3 Segmentación (chunking)
 - Segmentación diaria
 - Cada ejecución procesa ventanas [día, día + 1)
 - Evita timeouts y facilita reejecuciones controladas
 
-# 5.4 Paginación y límites
+### 5.4 Paginación y límites
 - Paginación QBO: start_position (1000 registros)
 - Manejo de límites mediante:
     - chunking temporal
     - refresh de access token por ventana
 
-# 5.5 Observabilidad
+### 5.5 Observabilidad
 Cada pipeline imprime logs estructurados:
 - Inicio y fin del pipeline
 - Ventanas procesadas
@@ -113,7 +105,7 @@ Cada pipeline imprime logs estructurados:
 - Filas cargadas por ventana
 - Duración por tramo
 
-# 5.6 Runbook (reintentos)
+### 5.6 Runbook (reintentos)
 Falla por ventana:
 - Reejecutar el mismo rango de fechas
 - La idempotencia evita duplicados
@@ -124,14 +116,14 @@ Falla por auth:
 
 ## 6. Trigger one-time
 
-# 6.1 Configuración
+### 6.1 Configuración
 - Tipo: schedule
 - Frecuencia: once
 - Variables:
     - fecha_inicio
     - fecha_fin
 
-# 6.2 Zona horaria
+### 6.2 Zona horaria
 - Mage ejecuta en UTC
 - Equivalencia:
     - UTC → Guayaquil (UTC-5)
@@ -140,7 +132,7 @@ Ejemplo:
 2026-02-01 18:00 UTC
 2026-02-01 13:00 Guayaquil
 
-# 6.3 Política post-ejecución
+### 6.3 Política post-ejecución
 
 - El trigger se deshabilita manualmente luego de finalizar la ejecución
 - Evita reejecuciones accidentales
@@ -148,14 +140,14 @@ Ejemplo:
 
 ## 7. Esquema raw en PostgreSQL
 
-# 7.1 Tablas
+### 7.1 Tablas
 
 Una tabla por entidad:
 - qb_customers
 - qb_items
 - qb_invoices
 
-# 7.2 Estructura de tablas
+### 7.2 Estructura de tablas
 CREATE TABLE raw.qb_<entidad> (
     id TEXT PRIMARY KEY,
     payload JSONB NOT NULL,
@@ -167,17 +159,17 @@ CREATE TABLE raw.qb_<entidad> (
     request_payload TEXT
 );
 
-# 7.3 Idempotencia
+### 7.3 Idempotencia
 - Upsert por id
 - Reejecutar un mismo tramo no genera duplicados
 - Evidencia incluida en volumetría
 
 ## 8. Validaciones y volumetría
 
-# 8.1 Conteo de registros
+### 8.1 Conteo de registros
 SELECT COUNT(*) FROM raw.qb_customers;
 
-# 8.2 Validación por ventana
+### 8.2 Validación por ventana
 SELECT
   extract_window_start_utc,
   COUNT(*)
@@ -185,7 +177,7 @@ FROM raw.qb_customers
 GROUP BY 1
 ORDER BY 1;
 
-# 8.3 Validación de idempotencia
+### 8.3 Validación de idempotencia
 - Reejecutar mismo rango
 - El conteo total permanece constante
 
@@ -203,8 +195,6 @@ Postgres
 - Verificar permisos y schema raw
 
 ## 10. Checklist de aceptación
-
-## ✅ Checklist de aceptación
 
 - [x] Mage AI y PostgreSQL se comunican por nombre de servicio.
 - [x] Todos los secretos (QBO y PostgreSQL) Mage Secrets; no hay secretos en el repo/entorno expuesto.
