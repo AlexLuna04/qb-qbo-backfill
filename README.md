@@ -36,12 +36,12 @@ Componentes:
 
 ### 3.2 Clonar el repositorio
 
-git clone <url_del_repo>
-cd qb-backfill
+`git clone <url_del_repo>`
+`cd qb-backfill`
 
 ### 3.3 Levantar contenedores
 
-docker compose up -d
+`docker compose up -d`
 
 Servicios levantados:
 - Mage AI → http://localhost:6789
@@ -73,9 +73,9 @@ No se almacenan secretos en el repositorio ni en archivos .env
 ## 5. Pipelines de backfill
 
 ### 5.1 Pipelines implementados
-- qb_customers_backfill
-- qb_items_backfill
-- qb_invoices_backfill
+- `qb_customers_backfill`
+- `qb_items_backfill`
+- `qb_invoices_backfill`
 
 ### 5.2 Parámetros
 Todos los pipelines reciben runtime variables desde el trigger:
@@ -83,8 +83,8 @@ Todos los pipelines reciben runtime variables desde el trigger:
 - fecha_fin:    Fin del backfill (UTC, ISO 8601)
 
 Ejemplo:
-2023-01-01T00:00:00+00:00
-2023-01-31T00:00:00+00:00
+`2023-01-01T00:00:00+00:00`
+`2023-01-31T00:00:00+00:00`
 
 ### 5.3 Segmentación (chunking)
 - Segmentación diaria
@@ -129,8 +129,8 @@ Falla por auth:
     - UTC → Guayaquil (UTC-5)
 
 Ejemplo:
-2026-02-01 18:00 UTC
-2026-02-01 13:00 Guayaquil
+`2026-02-01 18:00 UTC`
+`2026-02-01 13:00 Guayaquil`
 
 ### 6.3 Política post-ejecución
 
@@ -148,6 +148,7 @@ Una tabla por entidad:
 - qb_invoices
 
 ### 7.2 Estructura de tablas
+```sql
 CREATE TABLE raw.qb_<entidad> (
     id TEXT PRIMARY KEY,
     payload JSONB NOT NULL,
@@ -158,6 +159,7 @@ CREATE TABLE raw.qb_<entidad> (
     page_size INT,
     request_payload TEXT
 );
+```
 
 ### 7.3 Idempotencia
 - Upsert por id
@@ -167,15 +169,17 @@ CREATE TABLE raw.qb_<entidad> (
 ## 8. Validaciones y volumetría
 
 ### 8.1 Conteo de registros
-SELECT COUNT(*) FROM raw.qb_customers;
+`SELECT COUNT(*) FROM raw.qb_customers;`
 
 ### 8.2 Validación por ventana
+```sql
 SELECT
   extract_window_start_utc,
   COUNT(*)
 FROM raw.qb_customers
 GROUP BY 1
 ORDER BY 1;
+```
 
 ### 8.3 Validación de idempotencia
 - Reejecutar mismo rango
